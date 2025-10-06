@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 
 export default defineConfig({
+  base: '/gestfi_az/',
   plugins: [react()],
   server: {
     proxy: {
@@ -12,6 +13,5 @@ export default defineConfig({
         secure: false,
       }
     },
-    base: "/book-landing-page/"
   }
 })
