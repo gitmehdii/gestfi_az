@@ -1,7 +1,8 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -11,65 +12,132 @@ export const useAuth = () => {
   return context;
 };
 
+const decodeJwt = (token) => {
+  try {
+    const [, payload] = token.split('.');
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(atob(base64).split('').map(c => '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Vérifier si l'utilisateur est déjà connecté au démarrage
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    if (token && userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (error) {
-        console.error('Erreur lors du parsing des données utilisateur:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-      }
-    }
-    setLoading(false);
-  }, []);
-
-  const login = async (email, password) => {
-    try {
-      const response = await apiService.login(email, password);
-      
-      // Stocker les tokens et les informations utilisateur
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('refreshToken', response.refreshToken);
-      
-      const userData = {
-        email: response.email,
-        displayName: response.displayName,
-        isAdmin: response.isAdmin
-      };
-      
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-      
-      return response;
-    } catch (error) {
-      throw error;
-    }
+  const normalizeUser = (raw) => {
+    if (!raw || typeof raw !== 'object') return null;
+    const id = raw.id || raw.userId || raw.uuid || raw.userUUID || raw.user_id;
+    return id ? { ...raw, id } : { ...raw };
   };
 
-  const logout = () => {
+  // Fonction pour nettoyer les données d'authentification
+  const clearAuthData = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     setUser(null);
   };
 
-  const register = async (userData) => {
-    try {
-      const response = await apiService.register(userData);
-      return response;
-    } catch (error) {
-      throw error;
+  // Fonction pour valider et récupérer l'utilisateur connecté
+  const validateAndSetUser = async () => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    const refreshToken = localStorage.getItem('refreshToken');
+
+    if (!token || !userData || !refreshToken) {
+      clearAuthData();
+      setLoading(false);
+      return;
     }
+
+    try {
+      // Vérifier si le token est valide
+      await apiService.ensureValidToken();
+
+      // Parser et normaliser les données utilisateur
+      const parsed = JSON.parse(userData);
+      let normalized = normalizeUser(parsed);
+
+      if (normalized && !normalized.id) {
+        const claims = decodeJwt(token);
+        const derivedId = claims?.sub || claims?.userId || claims?.uid || claims?.id || claims?.user_id;
+        if (derivedId) {
+          normalized = { ...normalized, id: derivedId };
+        }
+      }
+
+      if (normalized && normalized.id && normalized.id !== 'undefined') {
+        setUser(normalized);
+        localStorage.setItem('user', JSON.stringify(normalized));
+      } else {
+        console.error('ID utilisateur invalide:', normalized);
+        clearAuthData();
+      }
+    } catch (error) {
+      console.error('Erreur lors de la validation du token:', error);
+      clearAuthData();
+    }
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    validateAndSetUser();
+
+    // Vérifier périodiquement la validité du token (toutes les 5 minutes)
+    const tokenCheckInterval = setInterval(async () => {
+      if (localStorage.getItem('token')) {
+        try {
+          await apiService.ensureValidToken();
+        } catch (error) {
+          console.error('Session expirée:', error);
+          clearAuthData();
+        }
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(tokenCheckInterval);
+  }, []);
+
+  const login = async (email, password) => {
+    const res = await apiService.login(email, password);
+    localStorage.setItem('token', res.token);
+    localStorage.setItem('refreshToken', res.refreshToken);
+
+    const rawUser = {
+      id: res.id,
+      userId: res.userId,
+      uuid: res.uuid,
+      email: res.email,
+      displayName: res.displayName,
+      isAdmin: res.isAdmin,
+    };
+
+    let normalized = normalizeUser(rawUser);
+    if (normalized && !normalized.id && res.token) {
+      const claims = decodeJwt(res.token);
+      const derivedId = claims?.sub || claims?.userId || claims?.uid || claims?.id || claims?.user_id;
+      if (derivedId) normalized = { ...normalized, id: derivedId };
+    }
+
+    if (!normalized || !normalized.id || normalized.id === 'undefined') {
+      throw new Error('Données utilisateur invalides reçues du serveur');
+    }
+
+    localStorage.setItem('user', JSON.stringify(normalized));
+    setUser(normalized);
+    return res;
+  };
+
+  const logout = () => {
+    clearAuthData();
+  };
+
+  const register = async (userData) => {
+    return apiService.register(userData);
   };
 
   const value = {
@@ -78,7 +146,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     register,
     loading,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
   };
 
   return (

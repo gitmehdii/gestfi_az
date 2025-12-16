@@ -5,6 +5,7 @@ import TransactionConsultation from './TransactionConsultation';
 import Analytics from './Analytics';
 import KeywordRules from './KeywordRules';
 import Estimations from './Estimations';
+import CompteEpargne from './CompteEpargne';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -125,6 +126,28 @@ const Dashboard = () => {
     );
   }
 
+  if (currentView === 'compte-epargne') {
+    return (
+      <div className="view-with-fixed-header">
+        <div className="dashboard-header">
+          <h1>Compte épargne</h1>
+          <div className="header-buttons">
+            <button
+              onClick={() => setCurrentView('dashboard')}
+              className="back-button"
+            >
+              ← Retour au tableau de bord
+            </button>
+            <button onClick={handleLogout} className="logout-button">
+              Déconnexion
+            </button>
+          </div>
+        </div>
+        <CompteEpargne showBackLink={false} />
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
@@ -204,6 +227,17 @@ const Dashboard = () => {
               <div>
                 <h4>Règles de mots-clés</h4>
                 <p>Classifier automatiquement les transactions</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setCurrentView('compte-epargne')}
+              className="action-button consultation-button"
+            >
+              <span className="action-icon">🏦</span>
+              <div>
+                <h4>Compte épargne</h4>
+                <p>Consulter et alimenter votre épargne</p>
               </div>
             </button>
           </div>
