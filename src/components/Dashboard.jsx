@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTokenValidation } from '../hooks/useTokenValidation';
 import TransactionManagement from './TransactionManagement';
 import TransactionConsultation from './TransactionConsultation';
 import Analytics from './Analytics';
@@ -10,11 +11,18 @@ import './Dashboard.css';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
+  const { isAuthenticated } = useTokenValidation();
   const [currentView, setCurrentView] = useState('dashboard');
 
   const handleLogout = () => {
     logout();
   };
+
+  // Si l'utilisateur n'est plus authentifié, ne rien afficher
+  // (la redirection sera gérée par le hook)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   if (currentView === 'transactions') {
     return (

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useApiNavigation } from './hooks/useApiNavigation';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -17,6 +18,9 @@ function AppContent() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
+  // Injecter la fonction navigate dans le service API
+  useApiNavigation();
+
   if (loading) {
     return (
       <div style={{ 
@@ -24,7 +28,7 @@ function AppContent() {
         justifyContent: 'center', 
         alignItems: 'center', 
         height: '100vh',
-        fontSize: '1.2rem' 
+        fontSize: '1.2rem'
       }}>
         Chargement de l'application...
       </div>

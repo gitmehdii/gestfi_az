@@ -87,9 +87,9 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     validateAndSetUser();
 
-    // Vérifier périodiquement la validité du token (toutes les 5 minutes)
+    // Vérifier périodiquement la validité du token (toutes les 30 secondes)
     const tokenCheckInterval = setInterval(async () => {
-      if (localStorage.getItem('token')) {
+      if (localStorage.getItem('token') && user) {
         try {
           await apiService.ensureValidToken();
         } catch (error) {
@@ -97,10 +97,30 @@ export const AuthProvider = ({ children }) => {
           clearAuthData();
         }
       }
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 30 * 1000); // 30 secondes
 
-    return () => clearInterval(tokenCheckInterval);
-  }, []);
+    // Intercepter les changements de route pour vérifier le token
+    const handleRouteChange = async () => {
+      if (localStorage.getItem('token') && user) {
+        try {
+          await apiService.ensureValidToken();
+        } catch (error) {
+          console.error('Session expirée lors du changement de route:', error);
+          clearAuthData();
+        }
+      }
+    };
+
+    // Ajouter un listener pour les changements de hash/route
+    window.addEventListener('hashchange', handleRouteChange);
+    window.addEventListener('popstate', handleRouteChange);
+
+    return () => {
+      clearInterval(tokenCheckInterval);
+      window.removeEventListener('hashchange', handleRouteChange);
+      window.removeEventListener('popstate', handleRouteChange);
+    };
+  }, [user]);
 
   const login = async (email, password) => {
     const res = await apiService.login(email, password);

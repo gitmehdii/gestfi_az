@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTokenValidation } from '../hooks/useTokenValidation';
 import { apiService } from '../services/api';
 import './TransactionConsultation.css';
 
 const TransactionConsultation = () => {
   const { user } = useAuth();
+  const { isAuthenticated } = useTokenValidation();
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTokenValidation } from '../hooks/useTokenValidation';
 import { addRule, clearRules, deleteRule, getRules, updateRule } from '../services/keywordRules';
 import { apiService as fe } from '../services/api';
 import './KeywordRules.css';
@@ -6,6 +7,7 @@ import './KeywordRules.css';
 const defaultRule = { keyword: '', type: 'DEBIT', category: '' };
 
 const KeywordRules = () => {
+  const { isAuthenticated } = useTokenValidation();
   const [rules, setRules] = useState([]);
   const [form, setForm] = useState(defaultRule);
   const [search, setSearch] = useState('');

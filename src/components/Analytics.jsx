@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTokenValidation } from '../hooks/useTokenValidation';
 import { apiService } from '../services/api';
 import {
   Chart as ChartJS,
@@ -35,6 +36,7 @@ const monthKey = (dateStr) => {
 const numberFormat = (n) => new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
 
 const Analytics = () => {
+  const { isAuthenticated } = useTokenValidation();
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);

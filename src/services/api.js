@@ -1,6 +1,15 @@
 const API_BASE_URL = 'http://localhost:8080/api';
 
 class ApiService {
+  constructor() {
+    this.navigate = null;
+  }
+
+  // Méthode pour injecter la fonction de navigation de React Router
+  setNavigate(navigateFunction) {
+    this.navigate = navigateFunction;
+  }
+
   // Vérifier si le token est expiré
   isTokenExpired(token) {
     if (!token) return true;
@@ -47,8 +56,15 @@ class ApiService {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+
     if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-      window.location.href = '/login';
+      if (this.navigate) {
+        // Utiliser React Router si disponible
+        this.navigate('/login');
+      } else {
+        // Fallback vers window.location si navigate n'est pas disponible
+        window.location.href = '/login';
+      }
     }
   }
 
@@ -147,13 +163,17 @@ class ApiService {
     }
   }
 
-  async getCompteEpargneByUserId(userId) {
+  async getCompteEpargneByUserId(userId = null) {
     try {
       // Valider le token avant la requête
       const validToken = await this.ensureValidToken();
 
       // Utiliser l'userId fourni ou récupérer celui de l'utilisateur connecté
       const finalUserId = userId || this.getUserId();
+
+      if (!finalUserId || finalUserId === 'undefined' || finalUserId === undefined) {
+        throw new Error('ID utilisateur invalide');
+      }
 
       const response = await fetch(`${API_BASE_URL}/epargne/${finalUserId}`, {
         method: 'GET',
@@ -182,13 +202,17 @@ class ApiService {
     }
   }
 
-  async addValueToCompteEpargne(userId, addValue) {
+  async addValueToCompteEpargne(userId = null, addValue) {
     try {
       // Valider le token avant la requête
       const validToken = await this.ensureValidToken();
 
       // Utiliser l'userId fourni ou récupérer celui de l'utilisateur connecté
       const finalUserId = userId || this.getUserId();
+
+      if (!finalUserId || finalUserId === 'undefined' || finalUserId === undefined) {
+        throw new Error('ID utilisateur invalide');
+      }
 
       const response = await fetch(`${API_BASE_URL}/epargne/${finalUserId}/add?addValue=${addValue}`, {
         method: 'PUT',
@@ -217,13 +241,17 @@ class ApiService {
     }
   }
 
-  async removeValueFromCompteEpargne(userId, removeValue) {
+  async removeValueFromCompteEpargne(userId = null, removeValue) {
     try {
       // Valider le token avant la requête
       const validToken = await this.ensureValidToken();
 
       // Utiliser l'userId fourni ou récupérer celui de l'utilisateur connecté
       const finalUserId = userId || this.getUserId();
+
+      if (!finalUserId || finalUserId === 'undefined' || finalUserId === undefined) {
+        throw new Error('ID utilisateur invalide');
+      }
 
       const response = await fetch(`${API_BASE_URL}/epargne/${finalUserId}/remove?removeValue=${removeValue}`, {
         method: 'PUT',
@@ -270,9 +298,12 @@ class ApiService {
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
 
-        
         // Redirect to login or handle session expiration
-        window.location.href = '/login';
+        if (this.navigate) {
+          this.navigate('/login');
+        } else {
+          window.location.href = '/login';
+        }
         throw new Error(data.message || 'Erreur lors du rafraîchissement du token');
       }
 

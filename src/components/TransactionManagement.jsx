@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTokenValidation } from '../hooks/useTokenValidation';
 import { apiService } from '../services/api';
 import PdfTransactionImporter from './PdfTransactionImporter';
 import './TransactionManagement.css';
 
 const TransactionManagement = () => {
   const { user } = useAuth();
+  const { isAuthenticated } = useTokenValidation();
   const [categories, setCategories] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [activeTab, setActiveTab] = useState('transactions');

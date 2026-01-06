@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTokenValidation } from '../hooks/useTokenValidation';
 import { apiService } from '../services/api';
 import './Estimations.css';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
@@ -20,6 +21,7 @@ const COLORS = [
 ];
 
 export default function Estimations() {
+  const { isAuthenticated } = useTokenValidation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   // Removed global success banner per user request

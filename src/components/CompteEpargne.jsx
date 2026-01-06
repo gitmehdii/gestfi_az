@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
+import { useTokenValidation } from '../hooks/useTokenValidation';
 import { apiService } from '../services/api';
 import './CompteEpargne.css';
 
 const CompteEpargne = ({ showBackLink = true }) => {
     const { user } = useContext(AuthContext);
+    const { isAuthenticated } = useTokenValidation();
+    // ...existing code...
     const [compteEpargne, setCompteEpargne] = useState(null);
     const [amount, setAmount] = useState('');
     const [error, setError] = useState('');
@@ -17,9 +20,9 @@ const CompteEpargne = ({ showBackLink = true }) => {
             setLoading(true);
             setError('');
             try {
-                if (!user?.id) {
-                    setError("Impossible de déterminer votre identifiant utilisateur. Veuillez vous reconnecter.");
-                    setCompteEpargne({ valeur: 0 });
+                if (!user?.id || user.id === 'undefined' || user.id === undefined) {
+                    setError("Session expirée. Veuillez vous reconnecter.");
+                    apiService.redirectToLogin();
                     return;
                 }
 
@@ -28,18 +31,23 @@ const CompteEpargne = ({ showBackLink = true }) => {
                 const normalized = (data && typeof data === 'object' && 'valeur' in data) ? data : { valeur: Number(data ?? 0) };
                 setCompteEpargne(normalized);
             } catch (error) {
-                setError("Échec de récupération du compte épargne: " + error.message);
-                console.error(error);
-                setCompteEpargne({ valeur: 0 });
+                console.error('Erreur récupération compte épargne:', error);
+                if (error.message.includes('Session expirée') || error.message.includes('invalide')) {
+                    apiService.redirectToLogin();
+                } else {
+                    setError("Échec de récupération du compte épargne: " + error.message);
+                    setCompteEpargne({ valeur: 0 });
+                }
             } finally {
                 setLoading(false);
             }
         };
 
-        if (user) {
+        if (user && user.id && user.id !== 'undefined') {
             fetchData();
         } else {
             setLoading(false);
+            setError("Session expirée. Veuillez vous reconnecter.");
         }
     }, [user]);
 
@@ -60,8 +68,9 @@ const CompteEpargne = ({ showBackLink = true }) => {
         if (n == null) return;
 
         try {
-            if (!user?.id) {
-                setError("Utilisateur non valide. Veuillez vous reconnecter.");
+            if (!user?.id || user.id === 'undefined' || user.id === undefined) {
+                setError("Session expirée. Veuillez vous reconnecter.");
+                apiService.redirectToLogin();
                 return;
             }
 
@@ -78,8 +87,12 @@ const CompteEpargne = ({ showBackLink = true }) => {
             setCompteEpargne(normalized);
             setAmount('');
         } catch (error) {
-            setError("Échec de l'opération sur le compte épargne: " + error.message);
-            console.error(error);
+            console.error('Erreur opération compte épargne:', error);
+            if (error.message.includes('Session expirée') || error.message.includes('invalide')) {
+                apiService.redirectToLogin();
+            } else {
+                setError("Échec de l'opération sur le compte épargne: " + error.message);
+            }
         }
     };
 
@@ -94,7 +107,7 @@ const CompteEpargne = ({ showBackLink = true }) => {
             {loading && <div>Chargement du compte épargne...</div>}
             {error && <p className="error">{error}</p>}
             {message && <p className="message">{message}</p>}
-            {!loading && (
+            {!loading && !error && (
                 <>
                     <div className="compte-epargne-details">
                         <h3>Solde actuel</h3>
