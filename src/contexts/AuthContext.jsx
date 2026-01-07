@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { apiService } from '../services/api';
 
 export const AuthContext = createContext();
@@ -26,6 +26,7 @@ const decodeJwt = (token) => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isValidatingRef = useRef(false);
 
   const normalizeUser = (raw) => {
     if (!raw || typeof raw !== 'object') return null;
@@ -43,6 +44,13 @@ export const AuthProvider = ({ children }) => {
 
   // Fonction pour valider et récupérer l'utilisateur connecté
   const validateAndSetUser = async () => {
+    // Éviter les validations simultanées
+    if (isValidatingRef.current) {
+      return;
+    }
+
+    isValidatingRef.current = true;
+
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
     const refreshToken = localStorage.getItem('refreshToken');
@@ -50,6 +58,7 @@ export const AuthProvider = ({ children }) => {
     if (!token || !userData || !refreshToken) {
       clearAuthData();
       setLoading(false);
+      isValidatingRef.current = false;
       return;
     }
 
@@ -82,14 +91,15 @@ export const AuthProvider = ({ children }) => {
     }
 
     setLoading(false);
+    isValidatingRef.current = false;
   };
 
   useEffect(() => {
     validateAndSetUser();
 
-    // Vérifier périodiquement la validité du token (toutes les 30 secondes)
+    // Vérifier périodiquement la validité du token (toutes les 2 minutes)
     const tokenCheckInterval = setInterval(async () => {
-      if (localStorage.getItem('token') && user) {
+      if (localStorage.getItem('token') && user && !isValidatingRef.current) {
         try {
           await apiService.ensureValidToken();
         } catch (error) {
@@ -97,30 +107,12 @@ export const AuthProvider = ({ children }) => {
           clearAuthData();
         }
       }
-    }, 30 * 1000); // 30 secondes
-
-    // Intercepter les changements de route pour vérifier le token
-    const handleRouteChange = async () => {
-      if (localStorage.getItem('token') && user) {
-        try {
-          await apiService.ensureValidToken();
-        } catch (error) {
-          console.error('Session expirée lors du changement de route:', error);
-          clearAuthData();
-        }
-      }
-    };
-
-    // Ajouter un listener pour les changements de hash/route
-    window.addEventListener('hashchange', handleRouteChange);
-    window.addEventListener('popstate', handleRouteChange);
+    }, 2 * 60 * 1000); // 2 minutes
 
     return () => {
       clearInterval(tokenCheckInterval);
-      window.removeEventListener('hashchange', handleRouteChange);
-      window.removeEventListener('popstate', handleRouteChange);
     };
-  }, [user]);
+  }, []);
 
   const login = async (email, password) => {
     const res = await apiService.login(email, password);

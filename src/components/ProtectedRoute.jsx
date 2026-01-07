@@ -1,25 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-
-  useEffect(() => {
-    const checkAuthentication = async () => {
-      if (user) {
-        try {
-          // Vérifier la validité du token à chaque navigation
-          await apiService.ensureValidToken();
-        } catch (error) {
-          console.error('Token invalide, redirection vers login:', error);
-          // Le service API se charge de la redirection
-        }
-      }
-    };
-
-    checkAuthentication();
-  }, [user]);
 
   if (loading) {
     return (

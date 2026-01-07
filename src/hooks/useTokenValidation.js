@@ -1,54 +1,18 @@
-import { useEffect } from 'react';
+import { useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
 
 /**
- * Hook personnalisé pour vérifier automatiquement la validité du token
- * sur chaque page et chaque requête
+ * Hook personnalisé pour vérifier la validité du token
+ * Version simplifiée pour éviter les boucles infinies
  */
 export const useTokenValidation = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const isInitialized = useRef(false);
 
-  useEffect(() => {
-    // Valider le token au montage du composant
-    const validateToken = async () => {
-      if (user && localStorage.getItem('token')) {
-        try {
-          await apiService.ensureValidToken();
-        } catch (error) {
-          console.error('Token invalide détecté:', error);
-          logout();
-        }
-      }
-    };
-
-    validateToken();
-
-    // Intercepter toutes les requêtes fetch pour vérifier le token
-    const originalFetch = window.fetch;
-
-    window.fetch = async (...args) => {
-      const [url, options] = args;
-
-      // Si c'est une requête API avec un token
-      if (url.includes('/api/') && options?.headers?.Authorization) {
-        try {
-          await apiService.ensureValidToken();
-        } catch (error) {
-          console.error('Token invalide lors de la requête:', error);
-          logout();
-          throw error;
-        }
-      }
-
-      return originalFetch(...args);
-    };
-
-    // Nettoyer à la fin
-    return () => {
-      window.fetch = originalFetch;
-    };
-  }, [user, logout]);
+  // Marquer comme initialisé au premier appel
+  if (!isInitialized.current) {
+    isInitialized.current = true;
+  }
 
   return {
     isAuthenticated: !!user,

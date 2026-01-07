@@ -3,6 +3,7 @@ const API_BASE_URL = 'http://localhost:8080/api';
 class ApiService {
   constructor() {
     this.navigate = null;
+    this.isRedirecting = false;
   }
 
   // Méthode pour injecter la fonction de navigation de React Router
@@ -53,6 +54,13 @@ class ApiService {
 
   // Rediriger vers la page de login
   redirectToLogin() {
+    // Éviter les redirections multiples simultanées
+    if (this.isRedirecting) {
+      return;
+    }
+
+    this.isRedirecting = true;
+
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
@@ -66,6 +74,11 @@ class ApiService {
         window.location.href = '/login';
       }
     }
+
+    // Réinitialiser le flag après un court délai
+    setTimeout(() => {
+      this.isRedirecting = false;
+    }, 1000);
   }
 
   // Obtenir l'ID utilisateur valide
