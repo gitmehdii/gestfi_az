@@ -113,7 +113,7 @@ const PdfTransactionImporter = ({ onImportComplete, onCancel }) => {
           date: formattedDate || new Date().toISOString().split('T')[0],
           type: transaction.credit > 0 ? 'CREDIT' : 'DEBIT',
           valeur: transaction.credit > 0 ? transaction.credit : Math.abs(transaction.debit),
-          categorieId: '',
+          categorieId: transaction.categorieId || '',
           reference: transaction.reference || '',
           page: transaction.page || 1,
           confirmed: false,
